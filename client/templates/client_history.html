@@ -1,0 +1,163 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block css %}
+{% endblock %}
+
+
+{% block body %}
+<main class="container">
+  <div class="row">
+    <div class="col-md-6 border-bottom">
+        <h1 class="h3">
+            История клиента
+        </h1>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-12">
+         <h2 class="h5 my-3">{{ client.name }} / {{ client.phone }}</h2>
+          <table class="table table-bordered table-striped table-sm text-center">
+              <thead class="table-dark ">
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Сауна</th>
+                    <th scope="col">Дата</th>
+                  <th scope="col">Кол людей</th>
+                  <th scope="col">Сумма за 1 час</th>
+                  <th scope="col">Часы</th>
+                    <th scope="col">-</th>
+                </tr>
+              </thead>
+               <tbody>
+               {% for i in order %}
+                  <tr>
+                    <th scope="row">{{ forloop.counter }}</th>
+                    <td>{{ i.sauna }}</td>
+                    <td>{{ i.start_time }}</td>
+                    <td>{{ i.people_count }}</td>
+                    <td>{{ i.sauna_hour_price|intcomma }}</td>
+                    <td>{{ i.hours }}</td>
+                      <td>
+                          <button class="btn btn-info more_btn" data-pk="{{ i.pk }}" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                            еще
+                          </button>
+                      </td>
+                  </tr>
+                   {% empty %}
+                   <tr>
+                    <td colspan="8">Empty</td>
+                   </tr>
+               {% endfor %}
+
+                </tbody>
+                <tfoot class="table-warning fw-bolder">
+                  <tr>
+                    <th colspan="8">
+                        &nbsp
+                    </th>
+                  </tr>
+                </tfoot>
+          </table>
+    </div>
+  </div>
+
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Дополнительное</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                      <div class="row">
+                      <div class="col-md-12">
+                            <!-- what we got -->
+                              <h2 class="h5">Таблица заказов</h2>
+                              <div class="border border-success p-2">
+                                          <table class="table table-bordered table-striped table-sm text-center">
+                                              <thead class="table-dark ">
+                                                <tr>
+                                                  <th scope="col">#</th>
+                                                  <th scope="col">Наименование</th>
+                                                  <th scope="col">Кол</th>
+                                                  <th scope="col">Един</th>
+                                                  <th scope="col">Общая</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody class="product_show_table">
+
+                                              </tbody>
+                                              <tfoot class="table-success fw-bolder">
+                                                <tr>
+                                                  <th scope="row"></th>
+                                                  <td></td>
+                                                  <td></td>
+                                                  <td></td>
+                                                  <td class="product_show_table_total">0</td>
+                                                </tr>
+                                              </tfoot>
+                                            </table>
+                              </div>
+                            <!-- what we got -->
+                      </div>
+                  </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+</main>
+{% endblock %}
+
+
+{% block js %}
+    <script>
+        $('.more_btn').on('click', function(){
+            $('.product_show_table').html('');
+            $.ajax({
+                url: "{% url 'client:order_item' %}",
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                data: JSON.stringify({
+                    'pk': $(this).attr('data-pk'),
+                }),
+                contentType: 'application/json',
+                dataType: 'json',
+                success: function(e) {
+                    console.log(e)
+                    let counter = 0
+                    for(let i=0; i < e.length; i++) {
+                        if(e[i]['model'] === 'order.orderitem') {
+                            counter += e[i]['fields']['total']
+                            for(let j=0; j < e.length; j++){
+                                if(e[j]['model'] === 'product.product') {
+                                    if(e[i]["fields"]["product"] === e[j]['pk']) {
+                                        let price = e[i]["fields"]["price"].toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+                                        let total = e[i]["fields"]["total"].toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+                                        $('.product_show_table').append(
+                                            '<tr>' +
+                                                '<th scope="row">#</th>' +
+                                                '<td>' + e[j]["fields"]["title"] + '</td>' +
+                                                '<td>' + e[i]["fields"]["count"] + '</td>' +
+                                                '<td>' + price + '</td>' +
+                                                '<td>' + total + '</td>' +
+                                            '</tr>'
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    $('.product_show_table_total').html(counter.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+                },
+                error: function(error) {
+                    console.log(error)
+                }
+            })
+        });
+    </script>
+{% endblock %}

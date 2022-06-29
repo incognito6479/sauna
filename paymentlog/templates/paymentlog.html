@@ -1,0 +1,202 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block css %}
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+{% endblock %}
+
+
+
+{% block body %}
+<main class="container">
+  <div class="row">
+    <div class="col-md-12">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="{% url 'sauna:calendar_view' %}">Главная</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Все приходы</li>
+            </ol>
+          </nav>
+    </div>
+    <div class="col-md-8 border-bottom">
+        <h1 class="h3">Приход за день {{ today.date }}</h1>
+    </div>
+  </div>
+  <div class="row">
+  <div class="col-md-12">
+    <table class="table table-bordered">
+        <tr>
+            <td class="table-secondary">Наличный расчет: ({{ cash_count }}) </td>
+            {% if cash_sum is None %}
+                <td class="cash_sum">0 Сум</td>
+                {% else %}
+                    <td class="cash_sum">{{ cash_sum|intcomma }} Сум</td>
+            {% endif %}
+
+        <td class="table-secondary">Безналичный расчет: ({{ cashless_count }}) </td>
+            {% if cashless_sum is None %}
+                <td class="cashless_sum">0 Сум</td>
+                {% else %}
+                    <td class="cashless_sum">{{ cashless_sum|intcomma }} Сум</td>
+            {% endif %}
+        <td class="table-secondary">Итого</td>
+        <td><span style="font-weight: bold;">{{ total_sum|intcomma }} Сум</span></td>
+        </tr>
+        <tr>
+            <td class="table-secondary" colspan="5">Сумма расходов на сегодня</td>
+            {% if outlay_sum is None %}
+                <td class="cash_sum" style="font-weight: bold;">0 Сум</td>
+                {% else %}
+                    <td class="cash_sum" style="font-weight: bold;">{{ outlay_sum|intcomma }} Сум</td>
+            {% endif %}
+        </tr>
+        <tr>
+            <td class="table-secondary" colspan="5">Чистый доход на сегодня</td>
+            <td class="show_original_income" style="font-weight: bold;"></td>
+        </tr>
+    </table>
+</div>
+    <div class="col-md-12 border-bottom">
+        <h1 class="h3">Все приходы</h1>
+    </div>
+  <div class="d-flex justify-content-end my-3">
+      <form class="d-flex justify-content-end" action="{% url 'payment_log:list' %}" method="POST">
+          {% csrf_token %}
+          <div class="col-md-3 mx-1">
+                    {{ filters.form.created|as_crispy_field }}
+{#                <input name="created_date" type="text" id="datepicker" class="form-control form-control-sm" placeholder="Дата создания">#}
+          </div>
+          <div class="col-md-3 mx-1">
+{#                <label for="select_type">Тип оплаты</label>#}
+{#            <select id="select_type" name="payment_type" class="form-select form-select-sm">#}
+{#                <option disabled selected value="">Тип оплаты</option>#}
+{#                <option value="advance">Аванс</option>#}
+{#                <option value="payment">Оплата</option>#}
+{#            </select>#}
+              {{ filters.form.payment_type|as_crispy_field }}
+        </div>
+          <div class="col-md-3 mx-1">
+{#                <label for="select_type">Метод оплаты</label>#}
+{#            <select id="select_type" name="payment_method" class="form-select form-select-sm">#}
+{#                <option disabled selected value="">Метод оплаты</option>#}
+{#                <option value="cash">Наличный</option>#}
+{#                <option value="cashless">Безналичный расчет</option>#}
+{#            </select>#}
+          {{ filters.form.payment_method|as_crispy_field }}
+        </div>
+          <div class="col-md-1">
+              <div class="mx-2">
+                  <label>Поиск</label>
+                <button type="submit" class="btn btn-sm btn-secondary">
+                    <img alt="/" src="{% static 'images/search-solid.svg' %}" class="img-fluid" style="width: 35px; height: 20px;">
+                </button>
+            </div>
+          </div>
+      </form>
+  </div>
+    <div class="col-md-12">
+          <table class="table table-bordered table-striped table-sm text-center">
+              <thead class="table-dark ">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Заказ</th>
+                    <th scope="col">Созданный</th>
+                    <th scope="col">Скидка</th>
+                    <th scope="col">Сумма после скидки</th>
+                    <th scope="col">Тип оплаты</th>
+                    <th scope="col">Метод оплаты</th>
+                    <th scope="col">Комментарий</th>
+                    <th scope="col"></th>
+                </tr>
+              </thead>
+               <tbody>
+               {% for i in page_obj %}
+                  <tr>
+                    <th scope="row">{{ forloop.counter }}</th>
+                    <td>
+                        <a href="{% url 'order:each' i.order.id %}" class="btn btn-sm btn-info">
+                            Заказ N {{ i.order }}
+                        </a>
+                    </td>
+                    <td>{{ i.created.date }}</td>
+                    <td>{{ i.discount|default:"0" }}</td>
+                    <td>{{ i.amount|intcomma }}</td>
+                    <td>{{ i.get_payment_type_display }}</td>
+                    <td>{{ i.get_payment_method_display }}</td>
+                    <td>{{ i.comment }}</td>
+                    <td>
+                        <div class="d-grid gap-2 d-md-block">
+                            <form type="hidden" method="POST" action="{% url 'payment_log:delete' i.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" value="DELETE">
+                                <button class="btn btn-danger btn-sm" type="submit">Удалить</button>
+                            </form>
+                        </div>
+                    </td>
+                  </tr>
+                   {% empty %}
+                   <tr>
+                       <td colspan="9">Пусто</td>
+                   </tr>
+               {% endfor %}
+                </tbody>
+               <tfoot class="table-success fw-bolder">
+                <tr>
+                  <th scope="row"></th>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td class="payment_total_show"></td>
+                  <td></td>
+                    <td></td>
+                    <td></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+          </table>
+    <div aria-label="Page navigation example">
+        <span class="pagination">
+            {% if page_obj.has_previous %}
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo; предыдущий</a>
+            {% endif %}
+
+            <span class="current page-link">
+                Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}.
+            </span>
+
+            {% if page_obj.has_next %}
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">следующий &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+
+{% block js %}
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script>
+
+        $( "#datepicker" ).datepicker({
+            dateFormat: 'yy-mm-dd',
+        });
+
+        let payment_total_show = 0
+        {% for i in page_obj %}
+            payment_total_show += {{ i.amount }}
+        {% endfor %}
+        $('.payment_total_show').html(payment_total_show.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+
+        let method_count = parseInt($('.cashless_count').html()) + parseInt($('.cash_count').html());
+        $('.method_count').html(method_count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+
+        let show_original_income = 0
+        show_original_income = {{ total_sum|default:0 }} - {{ outlay_sum|default:0 }};
+        $('.show_original_income').html(show_original_income.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + ' Сум')
+    </script>
+{% endblock %}

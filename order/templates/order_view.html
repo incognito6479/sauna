@@ -1,0 +1,702 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block css %}
+{% endblock %}
+
+
+{% block body %}
+    <main class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'sauna:calendar_view' %}">Главная</a></li>
+                        <li class="breadcrumb-item"><a href="#">Журнал бронирование</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Бронирование № 12</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="col-md-6 border-bottom">
+                <h1 class="h3">Бронирование № {{ object.id }}</h1>
+            </div>
+
+            <div class="col-md-6 text-end border-bottom">
+            <form name="delete_form" type="hidden" method="POST" action="{% url 'order:delete' object.pk %}">
+                {% csrf_token %}
+                <input type="hidden" value="DELETE">
+            </form>
+            {% if request.user.is_superuser %}
+                <a href="{% url 'order:edit' object.pk %}" class="btn btn-primary">
+                    Редактировать
+                </a>
+            {% endif %}
+                {% if object.status == 'active' %}
+                    <a href="{% url 'order:close' object.pk %}" class="btn btn-success">Закрыть заявку</a>
+                    <button type="submit" class="btn btn-danger order_btn" onclick="delete_form.submit();">Отменить заявку
+                </button>
+                {% endif %}
+                {% if request.user.is_superuser and object.status == 'inactive' %}
+                    <button type="submit" class="btn btn-danger order_btn" onclick="delete_form.submit();">Отменить заявку
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <table class="table table-bordered">
+                    <tr>
+                        <td class="table-secondary">Дата регистрации:</td>
+                        <td>{{ object.created }}</td>
+                        <td class="table-secondary">Статус:</td>
+                        <td>{{ object.get_status_display }}</td>
+                        <td class="table-secondary">Клиент:</td>
+                        <td>
+                            <a href="{% url 'client:history' object.client.id %}" class="btn btn-sm btn-info">
+                                {{ object.client.name }}
+                            </a>
+                        </td>
+                        <td class="table-secondary">Контакты:</td>
+                        <td>{{ object.client.phone }}</td>
+                    </tr>
+                    <tr>
+                        <td class="table-secondary">Дата бронирование:</td>
+                        <td>{{ object.start_time }}</td>
+                        <td class="table-secondary">Сауна:</td>
+                        <td>{{ object.sauna }}</td>
+                        <td class="table-secondary">Человек:</td>
+                        <td>{{ object.people_count }}</td>
+                        <td class="table-secondary">Сумма:</td>
+                        <td>1 час {{ object.sauna_hour_price|intcomma }} сум</td>
+                    </tr>
+                    <tr>
+                        <td class="table-secondary">Конец бронирование </td>
+                        <td>{{ object.end_time }}</td>
+                        <td colspan="6"></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="col-md-8">
+                <h2 class="h5">Сауна</h2>
+                <table class="table table-bordered table-striped table-sm text-center">
+                    <thead class="table-dark ">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Сауна</th>
+                        <th scope="col">Кол людей</th>
+                        <th scope="col">Сумма за 1 час</th>
+                        <th scope="col">Часы</th>
+                        <th scope="col">Общая</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <th scope="row">1</th>
+                        <td>{{ object.sauna }}</td>
+                        <td>{{ object.people_count }}</td>
+                        <td>{{ object.sauna_hour_price|intcomma }}</td>
+                        <td>{{ object.hours }}</td>
+                        <td class="total_payment_show"></td>
+                    </tr>
+                    </tbody>
+                    <tfoot class="table-warning fw-bolder">
+                    <tr>
+                        <th scope="row"></th>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="total_payment_show">0</td>
+                    </tr>
+                    </tfoot>
+                </table>
+
+                <h2 class="h5">Допольнительные услуги (еда)</h2>
+                <table class="table table-bordered table-striped table-sm text-center">
+                    <thead class="table-dark ">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Категори</th>
+                        <th scope="col">Наименование</th>
+                        <th scope="col">Кол</th>
+                        <th scope="col">Един</th>
+                        <th scope="col">Общая</th>
+                        <th scope="col"></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for i in order_item %}
+                        <tr>
+                            <th scope="row">{{ forloop.counter }}</th>
+                            <td>{{ i.product.category }}</td>
+                            <td>{{ i.product.title }}</td>
+                            <td>{{ i.count|intcomma }}</td>
+                            <td>{{ i.product.price|intcomma }}</td>
+                            <td>{{ i.total|intcomma }}</td>
+                            <td>
+                            {% if object.status == 'active' %}
+                                <form method="POST" action="{% url 'order:product-delete' i.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" value="DELETE">
+                                    <input type="hidden" name="id" value="{{ object.id }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Отменить
+                                    </button>
+                                </form>
+                            {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7">
+                                Пусто
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot class="table-warning fw-bolder">
+                    <tr>
+                        <th scope="row"></th>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="product_total_show"></td>
+                        <td></td>
+                    </tr>
+                    </tfoot>
+                </table>
+                <div class="d-flex">
+                    <h2 class="h5 mx-1">Штрафы</h2>
+                    <a href="{% url 'order:penalty-add' object.id %}" class="mx-1">Добавить штраф</a>
+                </div>
+                <table class="table table-bordered table-striped table-sm text-center">
+                    <thead class="table-dark ">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Причина</th>
+                        <th scope="col">Сумма</th>
+                        <th scope="col">-</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for i in penalty %}
+                        <tr>
+                            <th scope="row">{{ forloop.counter }}</th>
+                            <td>{{ i.reason }}</td>
+                            <td>{{ i.sum|intcomma }}</td>
+                            <td>
+                            {% if object.status == 'active' %}
+                                <form method="POST" action="{% url 'order:penalty-delete' i.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" value="DELETE">
+                                    <input type="hidden" name="id" value="{{ object.id }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Отменить
+                                    </button>
+                                </form>
+                            {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4">
+                                Пусто
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot class="table-warning fw-bolder">
+                    <tr>
+                        <th scope="row"></th>
+                        <td></td>
+                        <td class="penalty_total_show"></td>
+                        <td></td>
+                    </tr>
+                    </tfoot>
+                </table>
+
+                <h2 class="h5">Оплаты</h2>
+                <table class="table table-bordered table-striped table-sm text-center">
+                    <thead class="table-dark ">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Тип</th>
+                        <th scope="col">Метод</th>
+                        <th scope="col">Общая</th>
+                        <th scope="col">Скидка</th>
+                        <th scope="col">Итог</th>
+                        <th scope="col"></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for i in payment_log %}
+                        <tr>
+                            <th scope="row">{{ forloop.counter }}</th>
+                            <td>{{ i.get_payment_type_display }}</td>
+                            <td>{{ i.get_payment_method_display }}</td>
+                            <td>{{ i.total|intcomma }}</td>
+                            <td>{{ i.discount|default:'0' }}</td>
+                            <td>{{ i.amount|intcomma }}</td>
+                            <td>
+                                {% if object.status == 'active' %}
+                                <form method="POST" action="{% url 'order:payment-delete' i.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="id" value="{{ id }}">
+                                    <input type="hidden" value="DELETE">
+                                    <button type="submit" class="btn btn-danger btn-sm">Отменить</button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7">Пусто</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot class="table-warning fw-bolder">
+                    <tr>
+                        <th scope="row"></th>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="payment_log_total"></td>
+                        <td></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <!--right-->
+        {% if object.status == 'active' %}
+            <div class="col-md-4">
+                <h2 class="h5">Навигация</h2>
+                <!--modal-->
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                        Добавить еду
+                    </button>
+                </div>
+                <hr/>
+                <h2 class="h5">Форма оплаты</h2><br/>
+                <form name="payment_form" class="row g-3 border p-2" method="POST" action="{% url 'order:payment-create' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="order_id" value="{{ id }}">
+                    <input type="hidden" name="id" value="{{ object.pk }}">
+                    <div class="col-md-12">
+                        <label for="pay_summa" class="form-label">Сумма к оплате</label>
+                        <p class="text-danger d-none pay_summa_check">Пожалуйста, используйте только цифры</p>
+                        <input name="total" class="form-control" id="pay_summa" required>
+                    </div>
+                    <div class="col-md-12">
+                        {% if request.user.is_superuser %}
+                            <label for="pay_discount" class="form-label">Скидка</label>
+                            <input type="number" name="discount" placeholder="%" class="form-control" id="pay_discount">
+                            {% else %}
+                                <label for="pay_discount" class="form-label">Скидка</label>
+                                <input type="number" name="discount" placeholder="%" class="form-control" id="pay_discount" disabled>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-12">
+                        <label for="pay_summa_total" class="form-label">Итоговая сумма</label>
+                        <input name="amount" class="form-control" id="pay_summa_total" readonly required>
+                    </div>
+                    <div class="col-md-12">
+                        {{ payment_form.payment_type|as_crispy_field }}
+                    </div>
+                    <div class="col-md-12">
+                        {{ payment_form.payment_method|as_crispy_field }}
+                    </div>
+                    <div class="col-md-12">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success payment_btn" type="button">Принят оплату</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        {% endif %}
+            <!--right-->
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Меню кухни</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+
+                            <ul class="nav nav-tabs nav-justified" id="myTab" role="tablist">
+                                {% for i in product_category %}
+                                    <li class="nav-item" role="presentation">
+                                        {% if i.title == 'Напитки' %}
+                                            <button class="nav-link active" id="home-tab" data-bs-toggle="tab"
+                                                    data-bs-target="#drink" type="button" role="tab"
+                                                    aria-controls="drink" aria-selected="true">Напитки
+                                            </button>
+                                        {% elif i.title == 'Салаты' %}
+                                            <button class="nav-link" id="profile-tab" data-bs-toggle="tab"
+                                                    data-bs-target="#salad" type="button" role="tab"
+                                                    aria-controls="drink" aria-selected="true">Салаты
+                                            </button>
+                                        {% elif i.title == 'Закуски' %}
+                                            <button class="nav-link" id="contact-tab" data-bs-toggle="tab"
+                                                    data-bs-target="#snack" type="button" role="tab"
+                                                    aria-controls="drink" aria-selected="true">Закуски
+                                            </button>
+                                            {% else %}
+                                            <button class="nav-link" id="contact-tab" data-bs-toggle="tab"
+                                                    data-bs-target="#other" type="button" role="tab"
+                                                    aria-controls="drink" aria-selected="true">Другое
+                                            </button>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            <div class="tab-content" id="myTabContent">
+                                <div class="tab-pane fade show active" id="drink" role="tabpanel"
+                                     aria-labelledby="home-tab">
+                                    <!--first category-->
+                                    <table class="table table-bordered table-striped table-sm text-center">
+                                        <thead class="table-dark ">
+                                        <tr>
+                                            <th scope="col">#</th>
+                                            <th scope="col">Наименование</th>
+                                            <th scope="col"></th>
+                                            <th scope="col"></th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for i in product %}
+                                            {% if i.category.title == 'Напитки' %}
+                                                    <tr>
+                                                        <th scope="row">{{ forloop.counter }}</th>
+                                                        <td>{{ i.title }}</td>
+                                                        <td>
+                                                            <div class="input-group input-group-sm mb-3">
+                                                                <button type="button"
+                                                                        onclick="document.getElementById('product_{{ i.id }}_count').value = parseInt(document.getElementById('product_{{ i.id }}_count').value) - 1">
+                                                                    −
+                                                                </button>
+                                                                <input type="number" min="1" name="count"
+                                                                       class="form-control-sm"
+                                                                       id="product_{{ i.id }}_count" value="1" required>
+                                                                <button type="button"
+                                                                        onclick="document.getElementById('product_{{ i.id }}_count').value = parseInt(document.getElementById('product_{{ i.id }}_count').value) + 1">
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <button type="button"
+                                                                    onclick="add_new_order_item({{ i.id }}, {{ i.price }}, '{{ i.title }}', '{{ i.category.title }}')"
+                                                                    class="btn btn-outline-success btn-sm product_btn">
+                                                                Выбрать
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                            {% endif %}
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    <!--first category-->
+                                </div>
+                                <div class="tab-pane fade" id="salad" role="tabpanel" aria-labelledby="profile-tab">
+                                    <table class="table table-bordered table-striped table-sm text-center">
+                                        <thead class="table-dark ">
+                                        <tr>
+                                            <th scope="col">#</th>
+                                            <th scope="col">Наименование</th>
+                                            <th scope="col"></th>
+                                            <th scope="col"></th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for i in product %}
+                                            {% if i.category.title == 'Салаты' %}
+                                                <form method="POST" action="{% url 'order:product-add' %}">
+                                                    {% csrf_token %}
+                                                    <tr>
+                                                        <th scope="row">{{ forloop.counter }}</th>
+                                                        <td>{{ i.title }}</td>
+                                                        <td>
+                                                            <div class="input-group input-group-sm mb-3">
+
+                                                                <input type="hidden" name="order"
+                                                                       value="{{ object.pk }}">
+                                                                <input type="hidden" name="product" value="{{ i.pk }}">
+                                                                <input type="hidden" name="price" value="{{ i.price }}">
+                                                                <button type="button"
+                                                                        onclick="document.getElementById('product_{{ i.id }}_count').value = parseInt(document.getElementById('product_{{ i.id }}_count').value) - 1">
+                                                                    −
+                                                                </button>
+                                                                <input type="number" min="1" name="count"
+                                                                       class="form-control-sm"
+                                                                       id="product_{{ i.id }}_count" value="1" required>
+                                                                <button type="button"
+                                                                        onclick="document.getElementById('product_{{ i.id }}_count').value = parseInt(document.getElementById('product_{{ i.id }}_count').value) + 1">
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <button type="button"
+                                                                    onclick="add_new_order_item({{ i.id }}, {{ i.price }}, '{{ i.title }}', '{{ i.category.title }}')"
+                                                                    class="btn btn-outline-success btn-sm product_btn">
+                                                                Выбрать
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                </form>
+                                            {% endif %}
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="tab-pane fade" id="snack" role="tabpanel" aria-labelledby="contact-tab">
+                                    <table class="table table-bordered table-striped table-sm text-center">
+                                        <thead class="table-dark ">
+                                        <tr>
+                                            <th scope="col">#</th>
+                                            <th scope="col">Наименование</th>
+                                            <th scope="col"></th>
+                                            <th scope="col"></th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for i in product %}
+                                            {% if i.category.title == 'Закуски' %}
+                                                <form method="POST" action="{% url 'order:product-add' %}">
+                                                    {% csrf_token %}
+                                                    <tr>
+                                                        <th scope="row">{{ forloop.counter }}</th>
+                                                        <td>{{ i.title }}</td>
+                                                        <td>
+                                                            <div class="input-group input-group-sm mb-3">
+
+                                                                <input type="hidden" name="order"
+                                                                       value="{{ object.pk }}">
+                                                                <input type="hidden" name="product" value="{{ i.pk }}">
+                                                                <input type="hidden" name="price" value="{{ i.price }}">
+                                                                <button type="button"
+                                                                        onclick="document.getElementById('product_{{ i.id }}_count').value = parseInt(document.getElementById('product_{{ i.id }}_count').value) - 1">
+                                                                    −
+                                                                </button>
+                                                                <input type="number" min="1" name="count"
+                                                                       class="form-control-sm"
+                                                                       id="product_{{ i.id }}_count" value="1" required>
+                                                                <button type="button"
+                                                                        onclick="document.getElementById('product_{{ i.id }}_count').value = parseInt(document.getElementById('product_{{ i.id }}_count').value) + 1">
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <button type="button"
+                                                                    onclick="add_new_order_item({{ i.id }}, {{ i.price }}, '{{ i.title }}', '{{ i.category.title }}')"
+                                                                    class="btn btn-outline-success btn-sm product_btn">
+                                                                Выбрать
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                </form>
+                                            {% endif %}
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                            <div class="tab-pane fade" id="other" role="tabpanel" aria-labelledby="contact-tab">
+                                    <table class="table table-bordered table-striped table-sm text-center">
+                                        <thead class="table-dark ">
+                                        <tr>
+                                            <th scope="col">#</th>
+                                            <th scope="col">Наименование</th>
+                                            <th scope="col"></th>
+                                            <th scope="col"></th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for i in product %}
+                                            {% if i.category.title == 'Другое' %}
+                                                <form method="POST" action="{% url 'order:product-add' %}">
+                                                    {% csrf_token %}
+                                                    <tr>
+                                                        <th scope="row">{{ forloop.counter }}</th>
+                                                        <td>{{ i.title }}</td>
+                                                        <td>
+                                                            <div class="input-group input-group-sm mb-3">
+
+                                                                <input type="hidden" name="order"
+                                                                       value="{{ object.pk }}">
+                                                                <input type="hidden" name="product" value="{{ i.pk }}">
+                                                                <input type="hidden" name="price" value="{{ i.price }}">
+                                                                <button type="button"
+                                                                        onclick="document.getElementById('product_{{ i.id }}_count').value = parseInt(document.getElementById('product_{{ i.id }}_count').value) - 1">
+                                                                    −
+                                                                </button>
+                                                                <input type="number" min="1" name="count"
+                                                                       class="form-control-sm"
+                                                                       id="product_{{ i.id }}_count" value="1" required>
+                                                                <button type="button"
+                                                                        onclick="document.getElementById('product_{{ i.id }}_count').value = parseInt(document.getElementById('product_{{ i.id }}_count').value) + 1">
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <button type="button"
+                                                                    onclick="add_new_order_item({{ i.id }}, {{ i.price }}, '{{ i.title }}', '{{ i.category.title }}')"
+                                                                    class="btn btn-outline-success btn-sm product_btn">
+                                                                Выбрать
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                </form>
+                                            {% endif %}
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="col-md-6 ">
+                            <!-- what we got -->
+                            <h2 class="h5">Таблица заказов</h2>
+                            <form id="new_products_form" method="post" action="{% url 'order:product-add' %}" class="border border-success p-2">
+                                {% csrf_token  %}
+                                <table class="table table-bordered table-striped table-sm text-center">
+                                    <thead class="table-dark ">
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">Категори</th>
+                                        <th scope="col">Наименование</th>
+                                        <th scope="col">Кол</th>
+                                        <th scope="col">Един</th>
+                                        <th scope="col">Общая</th>
+                                        <th scope="col">-</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="order_new_items_tbody" class="product_table">
+                                    </tbody>
+                                </table>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="submit" form="new_products_form" class="btn btn-primary">Добавить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--modal-->
+    <!--MAIN BODY-->
+{% endblock %}
+
+
+
+{% block js %}
+    <script>
+        let penalty_total_show = 0
+        {% for i in penalty %}
+            penalty_total_show += {{ i.sum }};
+        {% endfor %}
+        $('.penalty_total_show').html(penalty_total_show)
+
+        let productList = [];
+        function add_new_order_item(product_id, price, product_name, product_category) {
+            let count = document.getElementById(`product_${product_id}_count`).value
+            if (parseInt(count) > 0) {
+                let total = parseInt(price) * parseInt(count)
+            if (!productList.includes(product_id)) {
+                let template = `
+                    <tr>
+                      <th scope="row"></th>
+                      <td>${product_category}</td>
+                      <td>${product_name}</td>
+                      <td class="product_count" id="new_order_product_${product_id}_count">${count}</td>
+                      <td class="product_count_total">${price}</td>
+                      <td class="product_each_total new_products_total" id="new_order_product_${product_id}_total">${total}</td>
+                          <td>
+                              <button type="button" onclick="productList_remove(this, ${product_id})" class="btn btn-outline-danger btn-sm">Удалить</button>
+                          </td>
+                        </form>
+                    </tr>
+                    <input type="hidden" id="new_order_product_${product_id}_count_input" name="count" value="${count}">
+                    <input type="hidden" name="product_id" value="${product_id}">
+                    <input type="hidden" name="order_id" value="{{ object.id }}">
+                    <input type="hidden" name="price" value="${price}">
+                `;
+                document.getElementById('order_new_items_tbody').innerHTML += template
+                productList.push(product_id)
+            } else {
+                document.getElementById(`new_order_product_${product_id}_count`).textContent = parseInt(document.getElementById(`new_order_product_${product_id}_count_input`).value) + parseInt(count)
+                document.getElementById(`new_order_product_${product_id}_count_input`).value = parseInt(document.getElementById(`new_order_product_${product_id}_count_input`).value) + parseInt(count)
+                document.getElementById(`new_order_product_${product_id}_total`).textContent = parseInt(document.getElementById(`new_order_product_${product_id}_total`).textContent) + total
+            }
+
+            }
+
+        }
+
+        function productList_remove(t, id) {
+            t.parentElement.parentElement.remove()
+            let index = productList.indexOf(id)
+            delete productList[index]
+        }
+
+        let total_product_price = 0;
+        {% for i in order_item %}
+            total_product_price += {{ i.total }}
+        {% endfor %}
+        $('.product_total_show').html(total_product_price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+        $('.product_total').html(total_product_price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+
+        let total_for_sauna = 0;
+        total_for_sauna += {{ object.hours }} * {{ object.sauna_hour_price }}
+        $('.total_payment_show').html(total_for_sauna.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+
+        let payment_log_total = 0
+        {% for i in payment_log %}
+            payment_log_total += {{ i.amount }}
+        {% endfor %}
+        $('.payment_log_total').html(payment_log_total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+        let p = (total_for_sauna + total_product_price + penalty_total_show) - payment_log_total;
+        $('#pay_summa').val(p.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+        $('#pay_summa_total').val(p.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+        $('#pay_summa').on('input', function () {
+            $('#pay_summa_total').val($(this).val())
+        })
+
+        $('#pay_discount').on('input', function () {
+            let counter = 0
+            let p = $('#pay_summa').val().split(' ').join('');
+            counter += parseInt(p) - (parseInt(p) * ($('#pay_discount').val() / 100))
+            $('#pay_summa_total').val(counter.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+        })
+
+        $('.payment_btn').on('click', function(){
+            let pay_summa = $('#pay_summa').val().split(' ').join('');
+            let regExp = /^\d+$/;
+            if (regExp.test(pay_summa)){
+                payment_form.submit();
+                $('.pay_summa_check').addClass('d-none')
+            }
+            else {
+                $('.pay_summa_check').removeClass('d-none')
+            }
+        })
+    </script>
+{% endblock %}

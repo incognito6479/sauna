@@ -1,0 +1,159 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block css %}
+{% endblock %}
+
+
+
+{% block body %}
+<main class="container">
+  <div class="row">
+    <div class="col-md-12">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="#">Главная</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Все расходы</li>
+            </ol>
+          </nav>
+    </div>
+    <div class="col-md-8 border-bottom">
+        <h1 class="h3">Расход за день {{ day.date }}</h1>
+    </div>
+      <div class="col-md-2 border-bottom">
+          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#example1Modal">
+              Добавить категория
+          </button>
+    </div>
+    <div class="col-md-2 border-bottom">
+      <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal">
+          Добавить расход
+      </button>
+    </div>
+  </div>
+  <div class="row">
+  <div class="col-md-12">
+    <table class="table table-bordered">
+        <tr>
+            <td class="table-secondary">Количество расходов: ({{ outlay_count }})</td>
+            {% if outlay_sum is None %}
+                <td class="cash_sum">0 Сум</td>
+                {% else %}
+                    <td class="cash_sum">{{ outlay_sum|intcomma }} Сум</td>
+            {% endif %}
+        <td class="table-secondary">Итого</td>
+        {% if outlay_sum is None %}
+                <td class="cash_sum" style="font-weight: bold;">0 Сум</td>
+                {% else %}
+                    <td class="cash_sum" style="font-weight: bold;">{{ outlay_sum|intcomma }} Сум</td>
+            {% endif %}
+        </tr>
+    </table>
+</div>
+    <div class="col-md-12">
+          <table class="table table-bordered table-striped table-sm text-center">
+              <thead class="table-dark ">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Категория</th>
+                    <th scope="col">Причина</th>
+                    <th scope="col">Сумма</th>
+                    <th scope="col">Созданный</th>
+                    <th scope="col"></th>
+                </tr>
+              </thead>
+               <tbody>
+               {% for i in outlay %}
+                  <tr>
+                    <th scope="row">{{ forloop.counter }}</th>
+                    <td>{{ i.category }}</td>
+                    <td>{{ i.name }}</td>
+                    <td>{{ i.summa|intcomma }}</td>
+                      <td>{{ i.created }}</td>
+                    <td>
+                        <div class="d-grid gap-2 d-md-block">
+                            <form type="hidden" method="POST" action="{% url 'outlay:category-delete' i.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" value="DELETE">
+                                <button class="btn btn-danger btn-sm" type="submit">Удалить</button>
+                            </form>
+                        </div>
+                    </td>
+                  </tr>
+                   {% empty %}
+                   <tr>
+                       <td colspan="6">Пусто</td>
+                   </tr>
+               {% endfor %}
+                </tbody>
+               <tfoot class="table-success fw-bolder">
+                <tr>
+                  <th scope="row"></th>
+                  <td></td>
+                  <td></td>
+                  <td class="outlay_total_show"></td>
+                  <td></td>
+                    <td></td>
+                </tr>
+              </tfoot>
+          </table>
+    </div>
+  </div>
+</main>
+
+    <!-- Modal -->
+            <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Новый расход</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <form class="row g-3" method="POST" action="">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <p class="text-secondary show_total_cash">В кассе есть {{ money_for_today|intcomma }} сум</p>
+                        <button class="btn btn-primary">Добавить</button>
+                      </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+   <div class="modal fade" id="example1Modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Новая категория</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+              <form class="row g-3" method="POST" action="{% url 'outlay:category-add' %}">
+                {% csrf_token %}
+                <label for="for_cat_name">Имя категории</label>
+                <input id="for_cat_name" class="form-control" name="name" required>
+                <button class="btn btn-success" type="submit">Добавить</button>
+              </form>
+          </div>
+        </div>
+      </div>
+    </div>
+{% endblock %}
+
+
+{% block js %}
+    <script>
+    let outlay_total_show = 0
+    {% for i in outlay %}
+        outlay_total_show += {{ i.summa }}
+    {% endfor %}
+    $('.outlay_total_show').html(outlay_total_show.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "))
+
+    let show_total_cash = 0
+    show_total_cash = {{ money_for_today|default:0 }} - {{ outlay_sum|default:0  }};
+    $('.show_total_cash').html('В кассе есть ' + show_total_cash.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") +' сум')
+    </script>
+{% endblock %}

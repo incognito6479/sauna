@@ -1,0 +1,230 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block css %}
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-ui-timepicker-addon/1.6.3/jquery-ui-timepicker-addon.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <style>
+        #calendar {
+        width: 100%;
+        }
+    </style>
+{% endblock %}
+
+
+{% block body %}
+    <!--MAIN BODY-->
+    <main class="container">
+      <div class="row align-items-center">
+        <div class="col-md-12">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                  <li class="breadcrumb-item"><a href="{% url 'sauna:calendar_view' %}">Главная</a></li>
+                  <li class="breadcrumb-item active" aria-current="page">Календарь бронирование</li>
+                </ol>
+              </nav>
+        </div>
+        <div class="col-md-6">
+            <h1 class="h3">Календарь бронирование</h1>
+        </div>
+          <div class="col-md-4">
+{#              <label for="select_2">Поиск клиента</label>#}
+                <select id="select_2" onchange="location= this.value" class="js-example-basic-single js-states form-control" name="client">
+                <option value="" disabled selected>Поиск существующих клиентов</option>
+                {% for i in clients %}
+                        <option value="{% url 'client:history' i.pk %}">{{ i.name }} / {{ i.phone }}</option>
+                {% endfor %}
+            </select>
+          </div>
+      <div class="col-md-2 text-end">
+          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+              Новый брон
+            </button>
+      </div>
+        <div class="col-md-2 ml-auto">
+           <!--modal-->
+            <!-- Modal -->
+            <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Новое бронирование</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <form class="row g-3" method="POST" action="{% url 'sauna:order-add' %}">
+                        {% csrf_token %}
+                        <div class="col-md-6">
+                            <label for="select_3" class="mb-3">Клиенты</label><br>
+                            <select id="select_3" style="width: 100%" class="js-example-basic-single js-states form-control" name="client_id">
+                                {% for i in clients %}
+                                        <option value="{{ i.pk }}">{{ i.name }} / {{ i.phone }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                          <label for="sauna_select" class="form-label">Сауна</label>
+{#                            {{ form.sauna|as_crispy_field }}#}
+                            <select name="sauna" class="form-select" id="sauna_select" required>
+                                <option value="" disabled selected>---</option>
+                                {% for i in sauna %}
+                                    <option value="{{ i.id }}">{{ i.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                          <label for="inputAddress" class="form-label m-0">Количество человека</label>
+{#                            {{ form.people_count|as_crispy_field }}#}
+                          <input type="number" min="1" name="people_count" class="form-control people_count" id="inputAddress" required>
+                        </div>
+                        <div class="col-md-3">
+{#                          <label for="inputAddress2" class="form-label">Длительность</label>#}
+                            {{ form.hours|as_crispy_field }}
+{#                          <input type="number" name="hours" class="form-control" id="inputAddress2" min="0">#}
+                        </div>
+                        <div class="col-md-3">
+{#                          <label for="inputCity" class="form-label">Начало</label>#}
+{#                            {{ form.start_time|as_crispy_field }}#}
+                            <p>Начало бронирования: <input name="start" type="text" id="datepicker" class="form-control start_time_input" required></p>
+{#                          <input type="text" class="form-control" id="inputCity">#}
+                        </div>
+                        <div class="col-md-3">
+{#                          <label for="inputState" class="form-label">Конец</label>#}
+{#                            {{ form.end_time|as_crispy_field }}#}
+                            <p>Конец бронирования: <input name="end" type="text" id="datepicker1" class="form-control end_time_input" required></p>
+{#                          <select id="inputState" class="form-select">#}
+{#                            <option selected>Choose...</option>#}
+{#                            <option>...</option>#}
+{#                          </select>#}
+                        </div>
+                        <div class="col-12">
+                            <div class="show_sauna_price_info d-none">
+                                <p>Сумма сауны за час <b><span class="show_sum_for_sauna"></span></b> от <b><span class="show_min_people"></span></b> до <b><span class="show_max_people"></span></b> человек</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                                <button type="submit" class="btn btn-primary">Бронировать</button>
+                              </div>
+                        </div>
+                      </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+           <!--modal-->
+        </div>
+      </div>
+    <hr>
+      <div class="row">
+        <div class="col-md-12">
+          <div id='calendar'></div>
+        </div>
+      </div>
+
+    </main>
+    <!--MAIN BODY-->
+{% endblock %}
+
+{% block js %}
+    <!-- Datepicker -->
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <!-- Timepicker -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-ui-timepicker-addon/1.6.3/jquery-ui-timepicker-addon.min.js"></script>
+    <!-- Select2 -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+         document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+
+          headerToolbar: {
+            left: 'dayGridMonth,timeGridWeek,timeGridDay',
+            center: 'title',
+            right: 'prev,next'
+          },
+          eventClick: function(info) {
+            var eventObj = info.event;
+
+            if (eventObj.url) {
+              {#alert(#}
+              {#  'Clicked ' + eventObj.title + '.\n' +#}
+              {#  'Will open ' + eventObj.url + ' in a new tab'#}
+              {#);#}
+              window.open(eventObj.url, "_self");
+              {#info.jsEvent.preventDefault(); // prevents browser from following link in current tab.#}
+            } else {
+              alert('Clicked ' + eventObj.title);
+            }
+          },
+          initialDate: new Date(),
+          events: [
+          {% for i in order %}
+              {
+                  title: '{{ i.client }} / {{ i.sauna }}',
+                  description: '{{ i.get_status_display }}',
+                  start: '{{ i.start_time }}',
+                  color: '{{ i.sauna.color }}',
+                  url: "{% url 'order:each' i.pk %}",
+              },
+          {% endfor %}
+          ]
+        });
+
+        calendar.render();
+      });
+
+           $(document).ready(function() {
+                $( "#datepicker" ).datetimepicker({
+                   dateFormat: 'yy-mm-dd',
+               });
+               $( "#datepicker1" ).datetimepicker({
+                   dateFormat: 'yy-mm-dd',
+               });
+               $('.js-example-basic-single').select2({
+                   style: ''
+               });
+               $('#select_3').select2({
+                   dropdownParent: $('#exampleModal')
+               })
+
+               $('.people_count').on('input', function(){
+                   let sauna_id = $('#sauna_select').val()
+                   let people_number = $(this).val()
+                   $.ajax({
+                       url: '{% url "sauna:get_sauna_type_ajax" %}',
+                       type: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        },
+                        data: JSON.stringify({
+                            'sauna_id': sauna_id,
+                        }),
+                        contentType: 'application/json',
+                        dataType: 'json',
+                       success: function(data){
+                           console.log(data)
+                           for(let i=0; i < data.length; i++) {
+                               let max = data[i]['fields']['max_people']
+                               let min = data[i]['fields']['min_people']
+                               if(people_number >= min && people_number <= max) {
+                                   $('.show_sum_for_sauna').html(data[i]['fields']['price'])
+                                   $('.show_min_people').html(min)
+                                   $('.show_max_people').html(max)
+                                   $('.show_sauna_price_info').removeClass('d-none')
+                               }
+                           }
+                       },
+                       error: function(error){
+                           console.log(error)
+                       },
+                   })
+               })
+            });
+        </script>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block css %}
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-ui-timepicker-addon/1.6.3/jquery-ui-timepicker-addon.min.css">
+{% endblock %}
+
+
+{% block body %}
+    {% if request.user.is_superuser %}
+        <div class="container">
+            <div class="card p-4">
+                <h3 class="my-3">Изменить заказ</h3>
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="row my-3">
+                            <div class="col-md-6">
+    {#                          <label for="inputEmail4" class="form-label">Клиент</label>#}
+                                {{ form.client|as_crispy_field }}
+    {#                          <input type="email" class="form-control" id="inputEmail4">#}
+                            </div>
+                            <div class="col-md-6">
+    {#                          <label for="inputPassword4" class="form-label">Сауна</label>#}
+                                {{ form.sauna|as_crispy_field }}
+    {#                          <input type="password" class="form-control" id="inputPassword4">#}
+                            </div>
+                            <div class="col-3">
+    {#                          <label for="inputAddress" class="form-label"> Количество человека </label>#}
+                                {{ form.people_count|as_crispy_field }}
+    {#                          <input type="text" class="form-control" id="inputAddress" placeholder="1234 Main St">#}
+                            </div>
+                            <div class="col-3">
+    {#                          <label for="inputAddress2" class="form-label">Время</label>#}
+                                {{ form.hours|as_crispy_field }}
+    {#                          <input type="text" class="form-control" id="inputAddress2" placeholder="Apartment, studio, or floor">#}
+                            </div>
+                            <div class="col-md-3">
+    {#                          <label for="inputCity" class="form-label">Начало</label>#}
+    {#                            {{ form.start_time|as_crispy_field }}#}
+                                <p>Начало: <input value="{{ order.start_time }}" name="start" type="text" id="datepicker" class="form-control" required></p>
+    {#                          <input type="text" class="form-control" id="inputCity">#}
+                            </div>
+                            <div class="col-md-3">
+    {#                          <label for="inputState" class="form-label">Конец</label>#}
+    {#                            {{ form.end_time|as_crispy_field }}#}
+                                <p>Конец: <input value="{{ order.end_time }}" name="end" type="text" id="datepicker1" class="form-control" required></p>
+    {#                          <select id="inputState" class="form-select">#}
+    {#                            <option selected>Choose...</option>#}
+    {#                            <option>...</option>#}
+    {#                          </select>#}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form.status|as_crispy_field }}
+                            </div>
+                        </div>
+                    <button type="submit" class="btn btn-success">Изменить</button>
+                    <a href="{% url 'order:each' id %}" class="btn btn-secondary">Назад</a>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <h3>Not allowed...</h3>
+    {% endif %}
+{% endblock %}
+
+{% block js %}
+    <!-- Datepicker -->
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <!-- Timepicker -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-ui-timepicker-addon/1.6.3/jquery-ui-timepicker-addon.min.js"></script>
+    <script>
+    $( function() {
+       $( "#datepicker" ).datetimepicker({
+           dateFormat: 'yy-mm-dd',
+       });
+       $( "#datepicker1" ).datetimepicker({
+           dateFormat: 'yy-mm-dd',
+       });
+       $('.js-example-basic-single').select2();
+   });
+    </script>
+{% endblock %}
